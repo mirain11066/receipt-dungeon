@@ -10,6 +10,8 @@
 
     <style>
         :root { --bg: #20202d; --win: #16161d; --text: #fff; --accent: #e94560; --gold: #ffd700; --hp: #4ade80; --dmg: #ff5555; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body { 
             background-color: var(--bg); color: var(--text); 
             font-family: 'DotGothic16', sans-serif; 
@@ -32,25 +34,30 @@
 
         .content-area {
             flex: 1; overflow-y: auto; position: relative;
-            padding-bottom: 150px; -webkit-overflow-scrolling: touch;
+            padding-bottom: 160px; /* 下部の余白を多めに確保 */
+            -webkit-overflow-scrolling: touch;
         }
 
+        /* --- エフェクト --- */
         .particles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: -1; pointer-events: none; }
         .particle { position: absolute; width: 4px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 50%; animation: float 10s infinite linear; }
         @keyframes float { 0% { transform: translateY(100vh); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(-10vh); opacity: 0; } }
 
-        /* --- バトル演出 --- */
+        .flash { animation: flash 0.2s; }
+        @keyframes flash { 0% { background-color: transparent; } 50% { background-color: rgba(255,255,255,0.8); } 100% { background-color: transparent; } }
+
+        /* --- バトル画面 --- */
         .battle-stage {
             height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center;
             margin-top: 10px; margin-bottom: 10px; position: relative;
         }
         .monster-emoji { font-size: 90px; filter: drop-shadow(0 0 15px rgba(255,255,255,0.2)); transition: transform 0.1s; }
         
-        /* レアリティカラー */
-        .rarity-1 { color: #fff; text-shadow: 0 0 5px #fff; } /* Normal */
-        .rarity-2 { color: #4ade80; text-shadow: 0 0 10px #4ade80; } /* Rare */
-        .rarity-3 { color: #a855f7; text-shadow: 0 0 15px #a855f7; } /* Epic */
-        .rarity-4 { color: #ffd700; text-shadow: 0 0 20px #ffd700; } /* Legendary */
+        /* レアリティ演出 */
+        .rarity-1 { color: #fff; } 
+        .rarity-2 { color: #4ade80; text-shadow: 0 0 8px #4ade80; } 
+        .rarity-3 { color: #a855f7; text-shadow: 0 0 12px #a855f7; } 
+        .rarity-4 { color: #ffd700; text-shadow: 0 0 15px #ffd700; } 
 
         .hp-box { width: 150px; height: 12px; background: #333; border: 2px solid #fff; margin-top: 10px; border-radius: 10px; overflow: hidden; display: none; }
         .hp-bar { width: 100%; height: 100%; background: var(--hp); transition: width 0.3s ease-out; }
@@ -63,13 +70,13 @@
         .log-entry { margin-bottom: 8px; border-bottom: 1px dashed #444; padding-bottom: 4px; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- ボタン類 --- */
+        /* --- 固定エリア（ボタン類） --- */
         .fixed-scan-container {
             position: fixed; bottom: 70px; left: 0; width: 100%;
             display: flex; flex-direction: column; align-items: center;
-            z-index: 40; padding: 0 20px; box-sizing: border-box;
-            background: linear-gradient(to top, var(--bg) 40%, transparent);
-            pointer-events: none;
+            z-index: 90; padding: 0 20px; box-sizing: border-box;
+            background: linear-gradient(to top, var(--bg) 30%, transparent);
+            pointer-events: none; /* コンテナはクリック透過 */
         }
         
         .scan-btn {
@@ -77,7 +84,8 @@
             padding: 15px 0; font-size: 18px; font-family: inherit; font-weight: bold;
             cursor: pointer; border-radius: 30px; width: 100%; max-width: 400px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5); text-shadow: 1px 1px 0 #000;
-            pointer-events: auto; display: flex; align-items: center; justify-content: center; gap: 10px;
+            pointer-events: auto; /* ボタンはクリック可能 */
+            display: flex; align-items: center; justify-content: center; gap: 10px;
             transition: transform 0.1s;
         }
         .scan-btn:active { transform: scale(0.98); }
@@ -86,55 +94,47 @@
             background: #1DA1F2; color: #fff; border: 2px solid #fff; margin-bottom: 10px;
             padding: 10px 0; font-size: 14px; font-family: inherit; font-weight: bold;
             cursor: pointer; border-radius: 20px; width: 100%; max-width: 400px;
-            pointer-events: auto; display: none; /* 初期は非表示 */
+            pointer-events: auto; display: none;
             align-items: center; justify-content: center; gap: 5px;
             box-shadow: 0 4px 0 #0c85d0;
         }
-        .share-btn:active { transform: translateY(4px); box-shadow: none; }
 
         .btn {
             background: #333; color: #fff; border: 1px solid #fff;
             padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 5px; width: 100%;
         }
 
-        .page { display: none; }
+        /* --- ページ切り替え --- */
+        .page { display: none; width: 100%; }
         .page.active { display: block; }
         
         .shop-item { background: rgba(50,50,50,0.8); border: 1px solid #777; padding: 15px; margin: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 5px; }
         .zukan-item { background: rgba(30,30,40,0.8); border: 1px solid #555; padding: 10px; margin: 5px 20px; display: flex; align-items: center; text-align: left; font-size: 14px; }
         .zukan-emoji { font-size: 30px; margin-right: 10px; }
 
-        .tabs { display: flex; background: #000; border-top: 2px solid #fff; height: 60px; position: fixed; bottom: 0; left: 0; width: 100%; z-index: 50; }
-        .tab { flex: 1; border: none; background: #000; color: #777; font-family: inherit; font-size: 14px; cursor: pointer; border-right: 1px solid #333; }
+        /* --- タブバー --- */
+        .tabs { 
+            display: flex; background: #000; border-top: 2px solid #fff; 
+            height: 60px; position: fixed; bottom: 0; left: 0; width: 100%; z-index: 100; 
+        }
+        .tab { 
+            flex: 1; border: none; background: #000; color: #777; 
+            font-family: inherit; font-size: 14px; cursor: pointer; 
+            border-right: 1px solid #333; padding: 0; margin: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
         .tab.active { color: #fff; background: #222; font-weight: bold; border-top: 4px solid var(--accent); }
 
+        /* --- ポップアップ演出 --- */
         .popup-text { position: absolute; font-size: 30px; font-weight: bold; pointer-events: none; animation: floatUp 0.8s forwards; text-shadow: 2px 2px 0 #000; z-index: 60; width: 100%; }
         @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 50% { transform: translateY(-30px) scale(1.5); } 100% { transform: translateY(-60px) scale(1); opacity: 0; } }
         
         .shake { animation: shake 0.5s; }
         @keyframes shake { 0% { transform: translate(0, 0); } 25% { transform: translate(-10px, 5px); } 50% { transform: translate(10px, -5px); } 75% { transform: translate(-5px, 10px); } 100% { transform: translate(0, 0); } }
-        
-        .flash { animation: flash 0.2s; }
-        @keyframes flash { 0% { background-color: transparent; } 50% { background-color: rgba(255,255,255,0.8); } 100% { background-color: transparent; } }
     </style>
 </head>
-<body>
-    <div class="particles" id="particles"></div>
-    <div id="flash-layer" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:100;"></div>
-
-    <div class="modal-overlay" id="tutorial-modal" style="display:none;">
-        <div class="modal-box">
-            <h3 style="color:var(--gold); border-bottom:1px solid #555; padding-bottom:5px;">🏰 レシート・ダンジョン</h3>
-            <p>v1.2 アップデート！</p>
-            <ul style="padding-left: 20px; font-size:14px; line-height: 1.8;">
-                <li>📸 <b>撮影:</b> レシートが魔物に変化</li>
-                <li>🆙 <b>成長:</b> レベルUPで基礎攻撃力上昇</li>
-                <li>⚡ <b>会心:</b> 運が良ければ強敵も一撃！</li>
-                <li>💰 <b>貯金:</b> 浮いたお金を記録しよう</li>
-            </ul>
-            <button class="scan-btn" onclick="closeTutorial()" style="width:100%; font-size:16px;">スタート</button>
-        </div>
-    </div>
+<body onclick="initAudio()"> <div class="particles" id="particles"></div>
+    <div id="flash-layer" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:95;"></div>
 
     <div class="status-bar">
         <div>LV.<span id="ui-lv">1</span></div>
@@ -146,8 +146,9 @@
     </div>
 
     <div class="content-area">
+        
         <div id="page-adventure" class="page active">
-            <div style="font-size:12px; color:#aaa; margin-top:5px;">AI: <span id="model-status">...</span></div>
+            <div style="font-size:12px; color:#aaa; margin-top:5px;">AI接続: <span id="model-status" style="color:#4ade80">ONLINE</span></div>
             
             <div class="battle-stage" id="battle-stage">
                 <div id="monster-emoji" class="monster-emoji">🏰</div>
@@ -156,10 +157,9 @@
             </div>
 
             <div class="message-window" id="log">
-                <div class="log-entry">賢者「レシートが世界を救う...かもしれん。」</div>
+                <div class="log-entry">賢者「レシートが世界を救う...」</div>
+                <div class="log-entry" style="color:#e94560">※直撮り以外も選べるようになりました</div>
             </div>
-            
-            <div style="height: 20px;"></div>
         </div>
 
         <div id="page-shop" class="page">
@@ -175,24 +175,24 @@
 
     <div class="fixed-scan-container" id="scan-container">
         <button class="share-btn" id="share-btn" onclick="shareTwitter()">
-            🐦 勝利を報告する (X)
+            🐦 勝利を報告 (X)
         </button>
 
-        <label class="scan-btn" id="scan-btn" style="opacity:0.5;">
-            <span>📸 レシートをスキャン</span>
-            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="processReceipt(this)">
+        <label class="scan-btn" id="scan-btn">
+            <span>📸 レシート召喚</span>
+            <input type="file" accept="image/*" style="display:none" onchange="processReceipt(this)">
         </label>
     </div>
 
     <div class="tabs">
-        <button class="tab active" onclick="changeTab('adventure')">⚔️ 冒険</button>
-        <button class="tab" onclick="changeTab('shop')">🏰 武器屋</button>
-        <button class="tab" onclick="changeTab('zukan')">📖 図鑑</button>
+        <button class="tab active" onclick="changeTab('adventure', this)">⚔️ 冒険</button>
+        <button class="tab" onclick="changeTab('shop', this)">🏰 武器屋</button>
+        <button class="tab" onclick="changeTab('zukan', this)">📖 図鑑</button>
     </div>
 
     <script>
-        const API_KEY = "AIzaSyBhPxGTYuDJQArPpo8YXlheiOGkwboyoms";
-        let activeModel = "";
+        const API_KEY = "AIzaSyBhPxGTYuDJQArPpo8YXlheiOGkwboyoms"; // 動作確認用のキー
+        const MODEL_NAME = "gemini-1.5-flash"; // モデルを固定
 
         const defaultData = { 
             lv: 1, gold: 0, exp: 0, realSavings: 0, weaponId: 0,
@@ -206,49 +206,53 @@
             { id: 5, name: "勇者の剣",   price: 30000, atk: 50000 }
         ];
 
-        let gameData = JSON.parse(localStorage.getItem('rd_save_v6')) || defaultData;
+        let gameData = JSON.parse(localStorage.getItem('rd_save_v7')) || defaultData;
         let audioCtx;
-        let lastBattleResult = null; // シェア用
+        let lastBattleResult = null;
 
-        window.onload = async function() {
+        window.onload = function() {
             createParticles();
             updateUI();
             renderShop();
             renderZukan();
             
+            // 初回訪問時
             if (!gameData.visited) {
-                document.getElementById('tutorial-modal').style.display = 'flex';
-            }
-
-            const statusSpan = document.getElementById('model-status');
-            const scanBtn = document.getElementById('scan-btn');
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`);
-                const data = await response.json();
-                const bestModel = data.models?.find(m => m.name.includes("flash")) || data.models?.[0];
-                
-                if (bestModel) {
-                    activeModel = bestModel.name.replace("models/", "");
-                    statusSpan.innerText = "ONLINE";
-                    statusSpan.style.color = "#4ade80";
-                    scanBtn.style.opacity = "1";
-                }
-            } catch (e) {
-                statusSpan.innerText = "OFFLINE";
+                addLog("賢者「下のボタンからレシートを読み込むのじゃ！」");
+                gameData.visited = true;
+                saveData();
             }
         };
 
-        function closeTutorial() {
-            document.getElementById('tutorial-modal').style.display = 'none';
-            gameData.visited = true;
-            saveData();
+        // --- タブ切り替え（修正版） ---
+        function changeTab(name, btnElement) {
             playSound('select');
+            
+            // 全ページのactiveを外す
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            // 対象ページを表示
+            const targetPage = document.getElementById('page-' + name);
+            if(targetPage) targetPage.classList.add('active');
+
+            // 全タブのactiveを外す
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            // 押されたボタンにactiveをつける
+            btnElement.classList.add('active');
+            
+            // スキャンボタンの表示切替
+            const scanContainer = document.getElementById('scan-container');
+            if (name === 'adventure') {
+                scanContainer.style.display = 'flex';
+            } else {
+                scanContainer.style.display = 'none';
+            }
         }
 
+        // --- レシート処理 ---
         async function processReceipt(input) {
-            if (!input.files || !input.files[0] || !activeModel) return;
+            if (!input.files || !input.files[0]) return;
             initAudio(); playSound('scan');
-            document.getElementById('share-btn').style.display = 'none'; // シェアボタン隠す
+            document.getElementById('share-btn').style.display = 'none';
 
             const log = document.getElementById('log');
             const emoji = document.getElementById('monster-emoji');
@@ -257,34 +261,36 @@
             const nameDiv = document.getElementById('monster-name');
 
             emoji.innerText = "⏳";
-            emoji.className = "monster-emoji"; // クラスリセット
+            emoji.className = "monster-emoji";
             hpBox.style.display = 'none';
-            nameDiv.innerText = "解析中...";
-            addLog("📡 異世界と通信中...");
+            nameDiv.innerText = "召喚中...";
+            addLog("📡 レシートを解析しています...");
             
             try {
                 const base64 = await compressImage(input.files[0]);
-                const prompt = `このレシートをRPGのモンスターとして解析して。
+                const prompt = `このレシートをRPGのモンスターとして解析。
                 JSON出力: {"amount":合計金額, "name":"ファンタジー風の名前", "emoji":"絵文字", "type":"waste(浪費)かinvest(投資)", "comment":"短いセリフ"}
                 例: 3000円の本→グリモワール, 500円の菓子→スライムスナック`;
                 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${activeModel}:generateContent?key=${API_KEY}`, {
+                // 固定モデルでリクエスト（接続チェックを省略して直接叩く）
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64 } }] }] })
                 });
                 
+                if (!response.ok) throw new Error("API Error");
+
                 const data = await response.json();
                 const cleanText = data.candidates[0].content.parts[0].text.replace(/```json|```/g, "").trim();
                 const res = JSON.parse(cleanText);
 
                 const enemyHp = res.amount || 100;
-                // プレイヤー攻撃力 = 武器 + (レベル x 50)
                 const weaponAtk = weapons.find(w => w.id === gameData.weaponId)?.atk || 100;
                 const levelBonus = gameData.lv * 50;
                 let totalAtk = weaponAtk + levelBonus;
                 
-                // レアリティ判定(色)
+                // レアリティ判定
                 let rarityClass = "rarity-1";
                 if(enemyHp > 2000) rarityClass = "rarity-2";
                 if(enemyHp > 5000) rarityClass = "rarity-3";
@@ -293,17 +299,16 @@
                 playSound('appear');
                 emoji.innerText = res.emoji || "👾";
                 nameDiv.innerText = `${res.name}`;
-                nameDiv.className = rarityClass; // 色適用
+                nameDiv.className = rarityClass;
                 hpBox.style.display = 'block';
                 hpBar.style.width = '100%';
                 
                 addLog(`⚔️ <span class="${rarityClass}">${res.name}</span> (HP:${enemyHp}) が現れた！`);
                 addLog(`💬「${res.comment}」`);
 
-                // バトル処理
+                // バトル
                 setTimeout(() => {
-                    // クリティカル判定 (10%)
-                    let isCrit = Math.random() < 0.1;
+                    let isCrit = Math.random() < 0.15; // クリティカル率15%
                     if (isCrit) {
                         totalAtk *= 2;
                         playSound('crit');
@@ -313,8 +318,6 @@
                     }
 
                     emoji.classList.add("shake");
-                    
-                    // ダメージ演出
                     const dmgText = isCrit ? `⚡${totalAtk}!!` : `💥${totalAtk}`;
                     const dmgColor = isCrit ? '#ffd700' : '#ff5555';
                     showPopup(dmgText, dmgColor);
@@ -331,14 +334,11 @@
                             gameData.gold += enemyHp;
                             gameData.realSavings += realMoney;
                             
-                            addLog(`🎉 勝利！ ${enemyHp}G を手に入れた！`);
-                            if(isCrit) addLog(`⚡ 会心の一撃だった！`);
+                            addLog(`🎉 勝利！ ${enemyHp}G GET`);
                             
-                            // 図鑑
                             gameData.zukan.unshift({ name: res.name, price: enemyHp, emoji: res.emoji, type: res.type });
                             if(gameData.zukan.length > 50) gameData.zukan.pop();
 
-                            // シェアデータ保存＆ボタン表示
                             lastBattleResult = { name: res.name, price: enemyHp };
                             document.getElementById('share-btn').style.display = 'flex';
 
@@ -348,27 +348,25 @@
                             renderZukan();
                         }, 800);
                     } else {
-                        // 負け
-                        hpBar.style.width = '80%'; // 少し減る
+                        hpBar.style.width = '80%';
                         playSound('damage');
-                        addLog(`🛡️ 硬い！(攻撃力:${totalAtk} < HP:${enemyHp})`);
-                        addLog(`💦 逃げ出した... レベルを上げて出直そう。`);
+                        addLog(`🛡️ 負けた... (攻撃力不足)`);
                     }
                 }, 1000);
 
             } catch (e) {
                 console.error(e);
-                addLog("❌ 解析失敗。もう一度。");
+                addLog("❌ 解析失敗。通信環境を確認してください。");
                 emoji.innerText = "👻";
             }
             input.value = ""; 
         }
 
-        // --- シェア機能 ---
+        // --- ユーティリティ ---
         function shareTwitter() {
             if(!lastBattleResult) return;
-            const text = `家計簿RPG『レシート・ダンジョン』で\n「${lastBattleResult.name} (¥${lastBattleResult.price})」を撃破しました！⚔️\n\n無駄遣いを倒して貯金中💰\n#レシートダンジョン`;
-            const url = "https://receipt-dungeon.vercel.app"; // あなたのURL
+            const text = `レシートRPGで「${lastBattleResult.name} (¥${lastBattleResult.price})」を撃破！\n無駄遣いを倒して貯金中💰\n#レシートダンジョン`;
+            const url = "https://receipt-dungeon.vercel.app";
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
         }
 
@@ -378,7 +376,6 @@
             setTimeout(() => el.className = '', 200);
         }
 
-        // --- 基本機能 ---
         function updateUI() {
             document.getElementById('ui-lv').innerText = gameData.lv;
             document.getElementById('ui-gold').innerText = gameData.gold.toLocaleString();
@@ -436,16 +433,6 @@
             });
         }
 
-        function changeTab(name) {
-            initAudio(); playSound('select');
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-' + name).classList.add('active');
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            const scanContainer = document.getElementById('scan-container');
-            scanContainer.style.display = name === 'adventure' ? 'flex' : 'none';
-        }
-
         function checkLevelUp() {
             const nextLvExp = gameData.lv * 1000;
             gameData.exp += 100;
@@ -467,8 +454,9 @@
             setTimeout(() => el.remove(), 1000);
         }
 
-        function saveData() { localStorage.setItem('rd_save_v6', JSON.stringify(gameData)); }
-        function createParticles() { /* 前と同じ */ 
+        function saveData() { localStorage.setItem('rd_save_v7', JSON.stringify(gameData)); }
+        
+        function createParticles() { 
             const container = document.getElementById('particles');
             for(let i=0; i<20; i++) {
                 const p = document.createElement('div'); p.className = 'particle';
@@ -477,7 +465,12 @@
             }
         }
 
-        function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
+        // --- オーディオ周り ---
+        function initAudio() { 
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+            if (audioCtx.state === 'suspended') audioCtx.resume(); 
+        }
+
         function playSound(type) {
             if(!audioCtx) return;
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
